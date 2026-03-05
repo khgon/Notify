@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF 열람 인증</title>
+    <style>
+      body { font-family: sans-serif; margin: 2rem; }
+      form { display: grid; gap: 0.75rem; max-width: 420px; }
+      input, button { padding: 0.6rem; font-size: 1rem; }
+      #status { margin-top: 1rem; }
+      iframe { width: 100%; height: 80vh; margin-top: 1rem; border: 1px solid #ddd; }
+    </style>
+  </head>
+  <body>
+    <h1>PDF 열람 인증</h1>
+    <p>허용된 이름 + 생년월일을 입력하면 PDF를 열람할 수 있습니다.</p>
+
+    <form id="auth-form">
+      <input id="name" name="name" placeholder="이름" required />
+      <input id="birthDate" name="birthDate" type="date" required />
+      <input id="fileName" name="fileName" value="sample.pdf" required />
+      <button type="submit">검증 후 PDF 열기</button>
+    </form>
+
+    <div id="status"></div>
+    <iframe id="pdf-viewer" hidden></iframe>
+
+    <script>
+      const form = document.getElementById("auth-form");
+      const status = document.getElementById("status");
+      const viewer = document.getElementById("pdf-viewer");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        status.textContent = "검증 중...";
+        viewer.hidden = true;
+
+        const payload = {
+          name: document.getElementById("name").value,
+          birthDate: document.getElementById("birthDate").value,
+          fileName: document.getElementById("fileName").value,
+        };
+
+        const response = await fetch("/api/verify-dob", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.ok) {
+          status.textContent = `실패: ${data.reason || "인증 실패"}`;
+          return;
+        }
+
+        status.textContent = `성공! ${data.expiresInSeconds}초 동안 열람 가능합니다.`;
+        viewer.src = data.pdfUrl;
+        viewer.hidden = false;
+      });
+    </script>
+  </body>
+</html>
